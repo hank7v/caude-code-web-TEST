@@ -1,0 +1,242 @@
+[
+    {
+        "name": "Proxima Centauri",
+        "distance": 4.2465,
+        "constellation": "Centaurus",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Alpha Centauri A",
+        "distance": 4.37,
+        "constellation": "Centaurus",
+        "type": "G-type Main Sequence"
+    },
+    {
+        "name": "Alpha Centauri B",
+        "distance": 4.37,
+        "constellation": "Centaurus",
+        "type": "K-type Main Sequence"
+    },
+    {
+        "name": "Barnard's Star",
+        "distance": 5.96,
+        "constellation": "Ophiuchus",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Wolf 359",
+        "distance": 7.86,
+        "constellation": "Leo",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Lalande 21185",
+        "distance": 8.31,
+        "constellation": "Ursa Major",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Sirius A",
+        "distance": 8.60,
+        "constellation": "Canis Major",
+        "type": "A-type Main Sequence"
+    },
+    {
+        "name": "Sirius B",
+        "distance": 8.60,
+        "constellation": "Canis Major",
+        "type": "White Dwarf"
+    },
+    {
+        "name": "Luyten 726-8A",
+        "distance": 8.73,
+        "constellation": "Cetus",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Ross 154",
+        "distance": 9.69,
+        "constellation": "Sagittarius",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Ross 248",
+        "distance": 10.29,
+        "constellation": "Andromeda",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Epsilon Eridani",
+        "distance": 10.50,
+        "constellation": "Eridanus",
+        "type": "K-type Main Sequence"
+    },
+    {
+        "name": "Lacaille 9352",
+        "distance": 10.74,
+        "constellation": "Piscis Austrinus",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Ross 128",
+        "distance": 11.01,
+        "constellation": "Virgo",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "61 Cygni A",
+        "distance": 11.41,
+        "constellation": "Cygnus",
+        "type": "K-type Main Sequence"
+    },
+    {
+        "name": "Procyon A",
+        "distance": 11.46,
+        "constellation": "Canis Minor",
+        "type": "F-type Subgiant"
+    },
+    {
+        "name": "Tau Ceti",
+        "distance": 11.91,
+        "constellation": "Cetus",
+        "type": "G-type Main Sequence"
+    },
+    {
+        "name": "Epsilon Indi",
+        "distance": 11.83,
+        "constellation": "Indus",
+        "type": "K-type Main Sequence"
+    },
+    {
+        "name": "Groombridge 34",
+        "distance": 11.62,
+        "constellation": "Andromeda",
+        "type": "Red Dwarf"
+    },
+    {
+        "name": "Altair",
+        "distance": 16.73,
+        "constellation": "Aquila",
+        "type": "A-type Main Sequence"
+    },
+    {
+        "name": "Vega",
+        "distance": 25.04,
+        "constellation": "Lyra",
+        "type": "A-type Main Sequence"
+    },
+    {
+        "name": "Fomalhaut",
+        "distance": 25.13,
+        "constellation": "Piscis Austrinus",
+        "type": "A-type Main Sequence"
+    },
+    {
+        "name": "Pollux",
+        "distance": 33.78,
+        "constellation": "Gemini",
+        "type": "K-type Giant"
+    },
+    {
+        "name": "Arcturus",
+        "distance": 36.66,
+        "constellation": "Boötes",
+        "type": "K-type Giant"
+    },
+    {
+        "name": "Capella",
+        "distance": 42.92,
+        "constellation": "Auriga",
+        "type": "G-type Giant"
+    },
+    {
+        "name": "Aldebaran",
+        "distance": 65.23,
+        "constellation": "Taurus",
+        "type": "K-type Giant"
+    },
+    {
+        "name": "Spica",
+        "distance": 250,
+        "constellation": "Virgo",
+        "type": "B-type Main Sequence"
+    },
+    {
+        "name": "Antares",
+        "distance": 550,
+        "constellation": "Scorpius",
+        "type": "Red Supergiant"
+    },
+    {
+        "name": "Betelgeuse",
+        "distance": 548,
+        "constellation": "Orion",
+        "type": "Red Supergiant"
+    },
+    {
+        "name": "Rigel",
+        "distance": 860,
+        "constellation": "Orion",
+        "type": "Blue Supergiant"
+    },
+    {
+        "name": "Deneb",
+        "distance": 2615,
+        "constellation": "Cygnus",
+        "type": "A-type Supergiant"
+    },
+    {
+        "name": "Polaris",
+        "distance": 433,
+        "constellation": "Ursa Minor",
+        "type": "F-type Supergiant"
+    },
+    {
+        "name": "Regulus",
+        "distance": 79.3,
+        "constellation": "Leo",
+        "type": "B-type Main Sequence"
+    },
+    {
+        "name": "Castor",
+        "distance": 51.5,
+        "constellation": "Gemini",
+        "type": "A-type Main Sequence"
+    },
+    {
+        "name": "Bellatrix",
+        "distance": 252,
+        "constellation": "Orion",
+        "type": "B-type Giant"
+    },
+    {
+        "name": "Alnilam",
+        "distance": 1342,
+        "constellation": "Orion",
+        "type": "B-type Supergiant"
+    },
+    {
+        "name": "Alnitak",
+        "distance": 1260,
+        "constellation": "Orion",
+        "type": "O-type Supergiant"
+    },
+    {
+        "name": "Mintaka",
+        "distance": 1200,
+        "constellation": "Orion",
+        "type": "O-type Giant"
+    },
+    {
+        "name": "Achernar",
+        "distance": 139,
+        "constellation": "Eridanus",
+        "type": "B-type Main Sequence"
+    },
+    {
+        "name": "Canopus",
+        "distance": 310,
+        "constellation": "Carina",
+        "type": "A-type Bright Giant"
+    }
+]

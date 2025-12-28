@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlight Time Machine - Find Your Star</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>✨ Starlight Time Machine</h1>
+            <p class="tagline">Discover which star's light has been traveling to Earth during your special moments</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <div class="date-input-group">
+                    <label for="date1">
+                        <span class="label-icon">📅</span>
+                        Start Date (When light began its journey)
+                    </label>
+                    <input type="date" id="date1" required>
+                </div>
+
+                <div class="date-input-group">
+                    <label for="date2">
+                        <span class="label-icon">📅</span>
+                        End Date (When light arrives on Earth)
+                    </label>
+                    <input type="date" id="date2" required>
+                </div>
+
+                <button id="calculateBtn" class="calculate-btn">
+                    Find My Star ⭐
+                </button>
+            </div>
+
+            <div id="results" class="results-section hidden">
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Days Traveled</span>
+                        <span id="daysValue" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Light-Years Distance</span>
+                        <span id="lightYearsValue" class="stat-value">-</span>
+                    </div>
+                </div>
+
+                <div id="starResults" class="star-results">
+                    <!-- Stars will be populated here -->
+                </div>
+            </div>
+
+            <div id="error" class="error-message hidden"></div>
+        </main>
+
+        <footer>
+            <div class="info-box">
+                <h3>How it works</h3>
+                <p>
+                    Light travels at approximately 299,792 km/s. When you select two dates,
+                    we calculate how far light would travel in that time period (in light-years),
+                    then find stars at that exact distance from Earth. The light you see from
+                    these stars today actually left them on your start date!
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
