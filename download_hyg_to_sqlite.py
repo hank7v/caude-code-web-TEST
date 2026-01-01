@@ -60,23 +60,27 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Create table
+    # Create table with coordinates for constellation drawing
     cursor.execute('''
         CREATE TABLE stars (
             id INTEGER PRIMARY KEY,
             hip INTEGER,
-            ra REAL,
-            dec REAL,
-            distance REAL,
+            ra REAL NOT NULL,
+            dec REAL NOT NULL,
+            distance REAL NOT NULL,
             mag REAL,
+            absmag REAL,
             proper_name TEXT,
+            bayer TEXT,
+            flam TEXT,
             spect TEXT,
             constellation TEXT
         )
     ''')
 
-    # Create index on distance for fast queries
+    # Create indexes for fast queries
     cursor.execute('CREATE INDEX idx_distance ON stars(distance)')
+    cursor.execute('CREATE INDEX idx_ra_dec ON stars(ra, dec)')
 
     print("Processing CSV (streaming mode)...")
 
@@ -113,7 +117,10 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
                 ra = float(row.get('ra', 0))
                 dec = float(row.get('dec', 0))
                 mag = float(row.get('mag', 99)) if row.get('mag') else 99
+                absmag = float(row.get('absmag', 99)) if row.get('absmag') else 99
                 proper = row.get('proper', '').strip()
+                bayer = row.get('bf', '').strip()  # Bayer/Flamsteed designation
+                flam = row.get('flam', '').strip()  # Flamsteed number
                 spect = row.get('spect', '').strip()
                 con = row.get('con', '').strip()
 
@@ -121,13 +128,13 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
                 continue
 
             # Add to batch
-            batch.append((hip, ra, dec, distance_ly, mag, proper, spect, con))
+            batch.append((hip, ra, dec, distance_ly, mag, absmag, proper, bayer, flam, spect, con))
 
             # Insert batch when it reaches batch_size
             if len(batch) >= batch_size:
                 cursor.executemany('''
-                    INSERT INTO stars (hip, ra, dec, distance, mag, proper_name, spect, constellation)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO stars (hip, ra, dec, distance, mag, absmag, proper_name, bayer, flam, spect, constellation)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', batch)
                 total_inserted += len(batch)
                 batch = []
@@ -139,8 +146,8 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
         # Insert remaining batch
         if batch:
             cursor.executemany('''
-                INSERT INTO stars (hip, ra, dec, distance, mag, proper_name, spect, constellation)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO stars (hip, ra, dec, distance, mag, absmag, proper_name, bayer, flam, spect, constellation)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', batch)
             total_inserted += len(batch)
 
