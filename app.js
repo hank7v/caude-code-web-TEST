@@ -130,6 +130,9 @@ class StarFinderService {
                     else if (spec.startsWith('M')) color = '#FF9966'; // Red-orange (most common)
                 }
 
+                // Calculate precision (days difference from target)
+                const daysDiff = Math.abs(distance - targetLightYears) * 365.25;
+
                 return {
                     name: name,
                     distance: distance,
@@ -138,7 +141,9 @@ class StarFinderService {
                     magnitude: mag || 10,
                     ra: ra || 0,
                     dec: dec || 0,
-                    color: color
+                    color: color,
+                    daysDifference: daysDiff,
+                    isPrecise: daysDiff <= 7  // Within 1 week = "precise"
                 };
             });
 
@@ -331,33 +336,78 @@ class ConstellationRenderer {
 
         for (const star of starPositions) {
             const size = this.magnitudeToSize(star.magnitude);
+            const x = star.pos.x;
+            const y = star.pos.y;
+
+            // PRIZE: Golden sparkle for precise matches (within 7 days)
+            if (star.isPrecise) {
+                this.drawSparkle(x, y, size);
+            }
 
             // Draw glow
-            const gradient = ctx.createRadialGradient(
-                star.pos.x, star.pos.y, 0,
-                star.pos.x, star.pos.y, size * 3
-            );
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
             gradient.addColorStop(0, star.color);
             gradient.addColorStop(0.3, star.color + '80');
             gradient.addColorStop(1, 'transparent');
 
             ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.arc(star.pos.x, star.pos.y, size * 3, 0, Math.PI * 2);
+            ctx.arc(x, y, size * 3, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw star core
             ctx.fillStyle = star.color;
             ctx.beginPath();
-            ctx.arc(star.pos.x, star.pos.y, size, 0, Math.PI * 2);
+            ctx.arc(x, y, size, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw bright center
             ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            ctx.arc(star.pos.x, star.pos.y, size * 0.4, 0, Math.PI * 2);
+            ctx.arc(x, y, size * 0.4, 0, Math.PI * 2);
             ctx.fill();
         }
+    }
+
+    // Draw golden sparkle effect for precise matches
+    drawSparkle(x, y, size) {
+        const ctx = this.ctx;
+        const rayLength = size * 5;
+
+        // Golden glow behind
+        const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, rayLength);
+        glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+        glowGradient.addColorStop(0.5, 'rgba(255, 215, 0, 0.1)');
+        glowGradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(x, y, rayLength, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw 4-point sparkle rays
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+        ctx.shadowBlur = 6;
+
+        // Vertical and horizontal rays
+        ctx.beginPath();
+        ctx.moveTo(x, y - rayLength);
+        ctx.lineTo(x, y + rayLength);
+        ctx.moveTo(x - rayLength, y);
+        ctx.lineTo(x + rayLength, y);
+        ctx.stroke();
+
+        // Diagonal rays (shorter)
+        const diagLength = rayLength * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(x - diagLength, y - diagLength);
+        ctx.lineTo(x + diagLength, y + diagLength);
+        ctx.moveTo(x + diagLength, y - diagLength);
+        ctx.lineTo(x - diagLength, y + diagLength);
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
     }
 
     drawLabels(starPositions) {
