@@ -105,9 +105,8 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
 
                 distance_ly = dist_parsecs * 3.26156
 
-                # Filter: Only stars within 5000 light-years (manageable dataset)
-                if distance_ly > 5000:
-                    continue
+                # No distance filter - include all stars for better matching
+                # (Original filter was 5000 ly, now using all available stars)
 
             except (ValueError, TypeError):
                 continue
