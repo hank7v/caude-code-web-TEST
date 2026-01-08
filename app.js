@@ -116,17 +116,18 @@ class StarFinderService {
                     else if (spec.startsWith('D')) type = 'White Dwarf';
                 }
 
-                // Get color based on spectral type
+                // Get color based on spectral type (enhanced contrast)
+                // M and K stars dominate nearby space, so make their colors distinct
                 let color = '#FFFFFF';
                 if (spect) {
                     const spec = spect.trim().toUpperCase();
-                    if (spec.startsWith('O')) color = '#9BB0FF';
-                    else if (spec.startsWith('B')) color = '#AABFFF';
-                    else if (spec.startsWith('A')) color = '#CAD7FF';
-                    else if (spec.startsWith('F')) color = '#F8F7FF';
-                    else if (spec.startsWith('G')) color = '#FFF4E8';
-                    else if (spec.startsWith('K')) color = '#FFD2A1';
-                    else if (spec.startsWith('M')) color = '#FFCC6F';
+                    if (spec.startsWith('O')) color = '#92B5FF';      // Deep blue
+                    else if (spec.startsWith('B')) color = '#A2C0FF'; // Blue-white
+                    else if (spec.startsWith('A')) color = '#D5E0FF'; // White-blue
+                    else if (spec.startsWith('F')) color = '#F9F5FF'; // Pure white
+                    else if (spec.startsWith('G')) color = '#FFF4E0'; // Yellow (Sun-like)
+                    else if (spec.startsWith('K')) color = '#FFCC80'; // Distinct orange
+                    else if (spec.startsWith('M')) color = '#FF9966'; // Red-orange (most common)
                 }
 
                 return {
@@ -460,7 +461,7 @@ class UIController {
                     light that traveled ${targetLightYears.toFixed(2)} years to reach you!
                 </p>
                 <div class="constellation-container">
-                    <canvas id="constellationCanvas" width="500" height="400"></canvas>
+                    <canvas id="constellationCanvas" width="800" height="600"></canvas>
                 </div>
                 <button id="downloadBtn" class="download-btn">
                     📥 Download Constellation
