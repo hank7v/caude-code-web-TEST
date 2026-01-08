@@ -1,15 +1,35 @@
-// Star database - will be loaded from JSON file
-let starsDatabase = [];
+// Star database - SQLite instance
+let db = null;
+let dbLoaded = false;
 
-// Load stars database
+// Load SQLite database
 async function loadStarsDatabase() {
     try {
-        const response = await fetch('stars-database.json');
-        starsDatabase = await response.json();
-        console.log(`Loaded ${starsDatabase.length} stars from database`);
+        console.log('Initializing SQL.js...');
+        const SQL = await initSqlJs({
+            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        });
+
+        console.log('Fetching stars database...');
+        const response = await fetch('stars.db');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const buffer = await response.arrayBuffer();
+        db = new SQL.Database(new Uint8Array(buffer));
+
+        // Test query to verify database
+        const result = db.exec('SELECT COUNT(*) as count FROM stars');
+        const starCount = result[0].values[0][0];
+        console.log(`✓ Loaded database with ${starCount.toLocaleString()} stars`);
+
+        dbLoaded = true;
+        return true;
     } catch (error) {
         console.error('Error loading stars database:', error);
         showError('Failed to load stars database. Please refresh the page.');
+        return false;
     }
 }
 
@@ -51,7 +71,7 @@ class DateCalculationService {
     }
 }
 
-// Star finder service - finds stars at a specific distance
+// Star finder service - finds stars at a specific distance using SQLite
 class StarFinderService {
     /**
      * Find stars at a specific distance from Earth
@@ -60,22 +80,79 @@ class StarFinderService {
      * @returns {Array} Array of matching stars with their details
      */
     static findStarsAtDistance(targetLightYears, tolerancePercent = 5) {
+        if (!dbLoaded || !db) {
+            console.error('Database not loaded');
+            return [];
+        }
+
         const tolerance = targetLightYears * (tolerancePercent / 100);
         const minDistance = targetLightYears - tolerance;
         const maxDistance = targetLightYears + tolerance;
 
-        const matchingStars = starsDatabase.filter(star => {
-            return star.distance >= minDistance && star.distance <= maxDistance;
-        });
+        console.log(`Querying stars between ${minDistance.toFixed(3)} and ${maxDistance.toFixed(3)} light-years`);
 
-        // Sort by closest match to target distance
-        matchingStars.sort((a, b) => {
-            const diffA = Math.abs(a.distance - targetLightYears);
-            const diffB = Math.abs(b.distance - targetLightYears);
-            return diffA - diffB;
-        });
+        try {
+            const query = `
+                SELECT
+                    proper_name,
+                    bayer,
+                    constellation,
+                    distance,
+                    mag,
+                    spect,
+                    ra,
+                    dec
+                FROM stars
+                WHERE distance >= ? AND distance <= ?
+                ORDER BY ABS(distance - ?) ASC
+                LIMIT 50
+            `;
 
-        return matchingStars;
+            const result = db.exec(query, [minDistance, maxDistance, targetLightYears]);
+
+            if (!result.length || !result[0].values.length) {
+                return [];
+            }
+
+            // Convert result to array of objects
+            const stars = result[0].values.map(row => {
+                const [proper_name, bayer, constellation, distance, mag, spect, ra, dec] = row;
+
+                // Determine display name
+                let name = proper_name || bayer || `Star at ${distance.toFixed(2)} ly`;
+
+                // Determine type from spectral class
+                let type = 'Unknown';
+                if (spect) {
+                    const spec = spect.trim().toUpperCase();
+                    if (spec.startsWith('O')) type = 'O-type (Blue)';
+                    else if (spec.startsWith('B')) type = 'B-type (Blue-white)';
+                    else if (spec.startsWith('A')) type = 'A-type (White)';
+                    else if (spec.startsWith('F')) type = 'F-type (Yellow-white)';
+                    else if (spec.startsWith('G')) type = 'G-type (Yellow)';
+                    else if (spec.startsWith('K')) type = 'K-type (Orange)';
+                    else if (spec.startsWith('M')) type = 'M-type (Red)';
+                    else if (spec.startsWith('D')) type = 'White Dwarf';
+                }
+
+                return {
+                    name: name,
+                    distance: distance,
+                    constellation: constellation || 'Unknown',
+                    type: type,
+                    magnitude: mag,
+                    ra: ra,
+                    dec: dec
+                };
+            });
+
+            console.log(`Found ${stars.length} stars`);
+            return stars;
+
+        } catch (error) {
+            console.error('Error querying database:', error);
+            return [];
+        }
     }
 
     /**
@@ -123,7 +200,7 @@ class UIController {
                 <div class="no-stars">
                     <div class="no-stars-icon">🔭</div>
                     <h3>No stars found at this exact distance</h3>
-                    <p>Try a different date range. Stars in our database range from 4.2 to 2,615 light-years away.</p>
+                    <p>Try adjusting your date range. Our database contains over 40,000 stars from 4.2 to 5,000 light-years away.</p>
                 </div>
             `;
             return;
@@ -135,13 +212,19 @@ class UIController {
                 ? 'Less than 1 day difference!'
                 : `±${Math.round(daysDifference)} days difference`;
 
+            // Show magnitude if available
+            const magInfo = star.magnitude && star.magnitude < 90
+                ? `<div><strong>Brightness:</strong> ${star.magnitude.toFixed(2)} mag</div>`
+                : '';
+
             return `
                 <div class="star-card">
                     <div class="star-name">⭐ ${star.name}</div>
                     <div class="star-info">
-                        <div><strong>Distance:</strong> <span class="star-distance">${star.distance} light-years</span></div>
+                        <div><strong>Distance:</strong> <span class="star-distance">${star.distance.toFixed(2)} light-years</span></div>
                         <div><strong>Constellation:</strong> ${star.constellation}</div>
                         <div><strong>Type:</strong> ${star.type}</div>
+                        ${magInfo}
                         <div><strong>Precision:</strong> ${accuracyText}</div>
                     </div>
                 </div>
@@ -152,7 +235,7 @@ class UIController {
             <h2>✨ Your Star${stars.length > 1 ? 's' : ''}!</h2>
             <p style="color: #b8c5d6; margin-bottom: 20px;">
                 Found ${stars.length} star${stars.length > 1 ? 's' : ''} whose light has been traveling
-                for approximately this duration:
+                for approximately this duration. These are real stars from the Hipparcos, Yale, and Gliese catalogs!
             </p>
             ${starsHTML}
         `;
@@ -179,6 +262,12 @@ async function calculateAndFindStars() {
         return;
     }
 
+    // Check if database is loaded
+    if (!dbLoaded) {
+        UIController.showError('Database is still loading. Please wait...');
+        return;
+    }
+
     // Calculate days between dates
     const numOfDays = DateCalculationService.calculateDaysBetween(date1, date2);
 
@@ -198,8 +287,22 @@ async function calculateAndFindStars() {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', async () => {
+    // Show loading message
+    const calculateBtn = document.getElementById('calculateBtn');
+    calculateBtn.disabled = true;
+    calculateBtn.textContent = 'Loading Database...';
+
     // Load the stars database
-    await loadStarsDatabase();
+    const success = await loadStarsDatabase();
+
+    // Re-enable button
+    calculateBtn.disabled = false;
+    calculateBtn.textContent = 'Find My Star ⭐';
+
+    if (!success) {
+        UIController.showError('Failed to load star database. Please refresh the page.');
+        return;
+    }
 
     // Set default dates (example: 10 years ago to today)
     const today = new Date();
@@ -210,7 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('date1').valueAsDate = tenYearsAgo;
 
     // Add click event listener to calculate button
-    document.getElementById('calculateBtn').addEventListener('click', calculateAndFindStars);
+    calculateBtn.addEventListener('click', calculateAndFindStars);
 
     // Allow Enter key to trigger calculation
     document.querySelectorAll('input[type="date"]').forEach(input => {
