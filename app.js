@@ -306,29 +306,48 @@ class ConstellationRenderer {
     drawConnections(starPositions) {
         const ctx = this.ctx;
 
-        // Draw subtle constellation lines
+        // Build connection pairs
+        const connections = [];
+        for (let i = 0; i < starPositions.length - 1; i++) {
+            connections.push([starPositions[i], starPositions[i + 1]]);
+        }
+        // Close the constellation
+        if (starPositions.length >= 3) {
+            connections.push([starPositions[starPositions.length - 1], starPositions[0]]);
+        }
+
+        // First pass: draw normal lines
         ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
         ctx.lineWidth = 1;
         ctx.shadowColor = 'rgba(100, 150, 255, 0.4)';
         ctx.shadowBlur = 4;
 
         ctx.beginPath();
-        for (let i = 0; i < starPositions.length - 1; i++) {
-            const star1 = starPositions[i];
-            const star2 = starPositions[i + 1];
+        for (const [star1, star2] of connections) {
+            // Skip if both are precise (we'll draw golden line later)
+            if (star1.isPrecise && star2.isPrecise && this.showSparkle) continue;
             ctx.moveTo(star1.pos.x, star1.pos.y);
             ctx.lineTo(star2.pos.x, star2.pos.y);
         }
+        ctx.stroke();
 
-        // Close the constellation
-        if (starPositions.length >= 3) {
-            const first = starPositions[0];
-            const last = starPositions[starPositions.length - 1];
-            ctx.moveTo(last.pos.x, last.pos.y);
-            ctx.lineTo(first.pos.x, first.pos.y);
+        // Second pass: draw golden lines between precise stars
+        if (this.showSparkle) {
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+            ctx.shadowBlur = 6;
+
+            ctx.beginPath();
+            for (const [star1, star2] of connections) {
+                if (star1.isPrecise && star2.isPrecise) {
+                    ctx.moveTo(star1.pos.x, star1.pos.y);
+                    ctx.lineTo(star2.pos.x, star2.pos.y);
+                }
+            }
+            ctx.stroke();
         }
 
-        ctx.stroke();
         ctx.shadowBlur = 0;
     }
 
