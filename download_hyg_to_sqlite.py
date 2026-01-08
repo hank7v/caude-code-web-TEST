@@ -201,22 +201,33 @@ def main():
 
     csv_file = "hyg_temp.csv"
     db_file = "stars.db"
+    cleanup_csv = True  # Whether to delete CSV after conversion
 
-    # Try downloading from primary URL
-    success = download_file(HYG_DATABASE_URL, csv_file)
+    # Check if CSV file path provided as argument
+    if len(sys.argv) > 1:
+        csv_file = sys.argv[1]
+        if not os.path.exists(csv_file):
+            print(f"✗ Error: File not found: {csv_file}")
+            sys.exit(1)
+        print(f"Using existing CSV file: {csv_file}")
+        cleanup_csv = False  # Don't delete user's file
+    else:
+        # Try downloading from primary URL
+        success = download_file(HYG_DATABASE_URL, csv_file)
 
-    # Try alternatives if primary fails
-    if not success:
-        print("\nTrying alternative URLs...")
-        for alt_url in ALTERNATIVE_URLS:
-            success = download_file(alt_url, csv_file)
-            if success:
-                break
+        # Try alternatives if primary fails
+        if not success:
+            print("\nTrying alternative URLs...")
+            for alt_url in ALTERNATIVE_URLS:
+                success = download_file(alt_url, csv_file)
+                if success:
+                    break
 
-    if not success:
-        print("\n✗ All download attempts failed!")
-        print("Please manually download from: https://www.astronexus.com/hyg")
-        sys.exit(1)
+        if not success:
+            print("\n✗ All download attempts failed!")
+            print("Please manually download from: https://www.astronexus.com/hyg")
+            print("Then run: python3 download_hyg_to_sqlite.py /path/to/hyg_v42.csv")
+            sys.exit(1)
 
     # Convert to SQLite
     try:
@@ -225,9 +236,12 @@ def main():
         # Verify
         verify_database(db_file)
 
-        # Cleanup CSV
-        print(f"\nCleaning up temporary file: {csv_file}")
-        os.remove(csv_file)
+        # Cleanup CSV only if it was downloaded (not user's file)
+        if cleanup_csv:
+            print(f"\nCleaning up temporary file: {csv_file}")
+            os.remove(csv_file)
+        else:
+            print(f"\nKeeping original CSV file: {csv_file}")
 
         print("\n" + "=" * 70)
         print("✓ SUCCESS!")
