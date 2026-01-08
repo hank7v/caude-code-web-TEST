@@ -300,11 +300,11 @@ class ConstellationRenderer {
     drawConnections(starPositions) {
         const ctx = this.ctx;
 
-        // Draw glowing constellation lines
-        ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
-        ctx.shadowBlur = 10;
+        // Draw subtle constellation lines
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.shadowColor = 'rgba(100, 150, 255, 0.4)';
+        ctx.shadowBlur = 4;
 
         ctx.beginPath();
         for (let i = 0; i < starPositions.length - 1; i++) {
