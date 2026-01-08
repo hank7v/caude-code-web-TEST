@@ -85,8 +85,9 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
     print("Processing CSV (streaming mode)...")
 
     # Process CSV line by line (streaming)
+    # Note: HYG CSV uses semicolons as delimiters
     with open(csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
+        reader = csv.DictReader(f, delimiter=';')
 
         batch = []
         batch_size = 1000
@@ -96,9 +97,9 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
         for row in reader:
             total_processed += 1
 
-            # Extract distance (convert parsecs to light-years)
+            # Extract distance (already in parsecs, convert to light-years)
             try:
-                dist_parsecs = float(row.get('dist', 0))
+                dist_parsecs = float(row.get('Distance', 0))
                 if dist_parsecs <= 0:
                     continue  # Skip stars without distance
 
@@ -111,18 +112,24 @@ def create_sqlite_database(csv_path, db_path="stars.db"):
             except (ValueError, TypeError):
                 continue
 
-            # Extract other fields
+            # Extract other fields - use exact column names from CSV
             try:
-                hip = int(row.get('hip', 0)) if row.get('hip') else None
-                ra = float(row.get('ra', 0))
-                dec = float(row.get('dec', 0))
-                mag = float(row.get('mag', 99)) if row.get('mag') else 99
-                absmag = float(row.get('absmag', 99)) if row.get('absmag') else 99
-                proper = row.get('proper', '').strip()
-                bayer = row.get('bf', '').strip()  # Bayer/Flamsteed designation
-                flam = row.get('flam', '').strip()  # Flamsteed number
-                spect = row.get('spect', '').strip()
-                con = row.get('con', '').strip()
+                hip_str = row.get('Hipparcos cat. ID', '').strip()
+                hip = int(hip_str) if hip_str else None
+                ra = float(row.get('RA', 0))
+                dec = float(row.get('Dec', 0))
+
+                mag_str = row.get('Magnitude', '').strip()
+                mag = float(mag_str) if mag_str else 99
+
+                absmag_str = row.get('Absolute magnitude', '').strip()
+                absmag = float(absmag_str) if absmag_str else 99
+
+                proper = row.get('Proper', '').strip()
+                bayer = row.get('Bayer / Flamsteed designation', '').strip()
+                flam = row.get('Flamsteed number', '').strip()
+                spect = row.get('Spectral type', '').strip()
+                con = row.get('Constellation abbreviation', '').strip()
 
             except (ValueError, TypeError):
                 continue
