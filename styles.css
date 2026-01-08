@@ -296,6 +296,36 @@ footer {
     background: linear-gradient(45deg, #5a7fb5, #7a9fd5);
 }
 
+/* Constellation Controls */
+.constellation-controls {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+.control-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #b8c5d6;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.control-checkbox:hover {
+    color: #ffffff;
+}
+
+.control-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #ffd700;
+    cursor: pointer;
+}
+
 /* Star List */
 .star-list {
     margin-top: 30px;

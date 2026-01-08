@@ -169,6 +169,7 @@ class ConstellationRenderer {
         this.ctx = this.canvas.getContext('2d');
         this.stars = [];
         this.connections = [];
+        this.showSparkle = true;  // Toggle for sparkle effect
     }
 
     /**
@@ -340,7 +341,7 @@ class ConstellationRenderer {
             const y = star.pos.y;
 
             // PRIZE: Golden sparkle for precise matches (within 7 days)
-            if (star.isPrecise) {
+            if (star.isPrecise && this.showSparkle) {
                 this.drawSparkle(x, y, size);
             }
 
@@ -502,6 +503,9 @@ class UIController {
             return;
         }
 
+        // Count precise stars
+        const preciseCount = stars.filter(s => s.isPrecise).length;
+
         // Create constellation section
         const constellationHTML = `
             <div class="constellation-section">
@@ -509,9 +513,20 @@ class UIController {
                 <p class="constellation-subtitle">
                     ${stars.length} star${stars.length > 1 ? 's' : ''} form your unique pattern -
                     light that traveled ${targetLightYears.toFixed(2)} years to reach you!
+                    ${preciseCount > 0 ? `<br><strong>${preciseCount} star${preciseCount > 1 ? 's' : ''} within 7-day precision!</strong>` : ''}
                 </p>
                 <div class="constellation-container">
                     <canvas id="constellationCanvas" width="800" height="600"></canvas>
+                </div>
+                <div class="constellation-controls">
+                    <label class="control-checkbox">
+                        <input type="checkbox" id="sparkleToggle" checked>
+                        <span>Show sparkle effect</span>
+                    </label>
+                    <label class="control-checkbox">
+                        <input type="checkbox" id="hiresToggle">
+                        <span>High resolution (1920×1200)</span>
+                    </label>
                 </div>
                 <button id="downloadBtn" class="download-btn">
                     📥 Download Constellation
@@ -551,6 +566,7 @@ class UIController {
         `;
 
         // Render constellation on canvas
+        this.currentStars = stars;
         this.renderConstellation(stars);
 
         // Add download button handler
@@ -560,14 +576,38 @@ class UIController {
                 this.constellationRenderer.downloadImage(`constellation-${date}.png`);
             }
         });
+
+        // Add toggle handlers
+        document.getElementById('sparkleToggle').addEventListener('change', (e) => {
+            if (this.constellationRenderer) {
+                this.constellationRenderer.showSparkle = e.target.checked;
+                this.constellationRenderer.render();
+            }
+        });
+
+        document.getElementById('hiresToggle').addEventListener('change', (e) => {
+            this.renderConstellation(this.currentStars, e.target.checked);
+        });
     }
 
-    static renderConstellation(stars) {
+    static currentStars = [];
+
+    static renderConstellation(stars, highRes = false) {
         // Wait for canvas to be in DOM
         setTimeout(() => {
             const canvas = document.getElementById('constellationCanvas');
             if (canvas) {
+                // Set resolution
+                if (highRes) {
+                    canvas.width = 1920;
+                    canvas.height = 1200;
+                } else {
+                    canvas.width = 800;
+                    canvas.height = 600;
+                }
+
                 this.constellationRenderer = new ConstellationRenderer('constellationCanvas');
+                this.constellationRenderer.showSparkle = document.getElementById('sparkleToggle')?.checked ?? true;
                 this.constellationRenderer.setStars(stars);
                 this.constellationRenderer.render();
             }
