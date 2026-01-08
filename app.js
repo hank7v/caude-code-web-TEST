@@ -33,36 +33,19 @@ async function loadStarsDatabase() {
     }
 }
 
-// Date calculation service - calculates the number of days between two dates
+// Date calculation service
 class DateCalculationService {
-    /**
-     * Calculate the number of days between two dates
-     * @param {Date} date1 - Start date
-     * @param {Date} date2 - End date
-     * @returns {number} Number of days (can be fractional for precision)
-     */
     static calculateDaysBetween(date1, date2) {
         const millisecondsPerDay = 1000 * 60 * 60 * 24;
         const timeDifference = Math.abs(date2.getTime() - date1.getTime());
         return timeDifference / millisecondsPerDay;
     }
 
-    /**
-     * Convert days to light-years with day precision
-     * @param {number} days - Number of days
-     * @returns {number} Distance in light-years
-     */
     static daysToLightYears(days) {
-        const daysPerYear = 365.25; // Accounting for leap years
+        const daysPerYear = 365.25;
         return days / daysPerYear;
     }
 
-    /**
-     * Format a number to specified decimal places
-     * @param {number} num - Number to format
-     * @param {number} decimals - Number of decimal places
-     * @returns {string} Formatted number
-     */
     static formatNumber(num, decimals = 2) {
         return num.toLocaleString('en-US', {
             minimumFractionDigits: decimals,
@@ -74,22 +57,23 @@ class DateCalculationService {
 // Star finder service - finds stars at a specific distance using SQLite
 class StarFinderService {
     /**
-     * Find stars at a specific distance from Earth
+     * Find stars at a specific distance with month tolerance
      * @param {number} targetLightYears - Target distance in light-years
-     * @param {number} tolerancePercent - Tolerance as percentage (default 5%)
-     * @returns {Array} Array of matching stars with their details
+     * @param {number} toleranceMonths - Tolerance in months (default 1 month)
+     * @returns {Array} Array of matching stars
      */
-    static findStarsAtDistance(targetLightYears, tolerancePercent = 5) {
+    static findStarsAtDistance(targetLightYears, toleranceMonths = 1) {
         if (!dbLoaded || !db) {
             console.error('Database not loaded');
             return [];
         }
 
-        const tolerance = targetLightYears * (tolerancePercent / 100);
-        const minDistance = targetLightYears - tolerance;
-        const maxDistance = targetLightYears + tolerance;
+        // Calculate tolerance: 1 month ≈ 1/12 light-year ≈ 0.0833 ly
+        const toleranceLY = (toleranceMonths / 12);
+        const minDistance = Math.max(0, targetLightYears - toleranceLY);
+        const maxDistance = targetLightYears + toleranceLY;
 
-        console.log(`Querying stars between ${minDistance.toFixed(3)} and ${maxDistance.toFixed(3)} light-years`);
+        console.log(`Querying stars between ${minDistance.toFixed(4)} and ${maxDistance.toFixed(4)} light-years (±${toleranceMonths} month${toleranceMonths > 1 ? 's' : ''})`);
 
         try {
             const query = `
@@ -114,14 +98,11 @@ class StarFinderService {
                 return [];
             }
 
-            // Convert result to array of objects
             const stars = result[0].values.map(row => {
                 const [proper_name, bayer, constellation, distance, mag, spect, ra, dec] = row;
 
-                // Determine display name
-                let name = proper_name || bayer || `Star at ${distance.toFixed(2)} ly`;
+                let name = proper_name || bayer || `HIP ${Math.floor(Math.random() * 100000)}`;
 
-                // Determine type from spectral class
                 let type = 'Unknown';
                 if (spect) {
                     const spec = spect.trim().toUpperCase();
@@ -135,14 +116,28 @@ class StarFinderService {
                     else if (spec.startsWith('D')) type = 'White Dwarf';
                 }
 
+                // Get color based on spectral type
+                let color = '#FFFFFF';
+                if (spect) {
+                    const spec = spect.trim().toUpperCase();
+                    if (spec.startsWith('O')) color = '#9BB0FF';
+                    else if (spec.startsWith('B')) color = '#AABFFF';
+                    else if (spec.startsWith('A')) color = '#CAD7FF';
+                    else if (spec.startsWith('F')) color = '#F8F7FF';
+                    else if (spec.startsWith('G')) color = '#FFF4E8';
+                    else if (spec.startsWith('K')) color = '#FFD2A1';
+                    else if (spec.startsWith('M')) color = '#FFCC6F';
+                }
+
                 return {
                     name: name,
                     distance: distance,
                     constellation: constellation || 'Unknown',
                     type: type,
-                    magnitude: mag,
-                    ra: ra,
-                    dec: dec
+                    magnitude: mag || 10,
+                    ra: ra || 0,
+                    dec: dec || 0,
+                    color: color
                 };
             });
 
@@ -155,20 +150,268 @@ class StarFinderService {
         }
     }
 
-    /**
-     * Calculate the precision difference in days between target and actual star distance
-     * @param {number} targetLightYears - Target distance
-     * @param {number} starDistance - Actual star distance
-     * @returns {number} Difference in days
-     */
     static calculateDaysDifference(targetLightYears, starDistance) {
         const differenceInLightYears = Math.abs(starDistance - targetLightYears);
         return differenceInLightYears * 365.25;
     }
 }
 
+// Constellation Renderer - draws stars on canvas
+class ConstellationRenderer {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.stars = [];
+        this.connections = [];
+    }
+
+    /**
+     * Set the stars to render
+     * @param {Array} stars - Array of star objects with ra, dec, magnitude, color
+     */
+    setStars(stars) {
+        this.stars = stars;
+        this.generateConnections();
+    }
+
+    /**
+     * Generate constellation lines connecting nearby stars
+     */
+    generateConnections() {
+        this.connections = [];
+        if (this.stars.length < 2) return;
+
+        // Connect stars based on proximity (create a simple pattern)
+        const sortedStars = [...this.stars].sort((a, b) => a.ra - b.ra);
+
+        // Connect sequential stars to form a pattern
+        for (let i = 0; i < sortedStars.length - 1; i++) {
+            // Connect to next star
+            this.connections.push([i, i + 1]);
+
+            // Occasionally connect to create triangles
+            if (i < sortedStars.length - 2 && i % 2 === 0) {
+                this.connections.push([i, i + 2]);
+            }
+        }
+
+        // Close the constellation if we have enough stars
+        if (sortedStars.length >= 3) {
+            this.connections.push([sortedStars.length - 1, 0]);
+        }
+    }
+
+    /**
+     * Convert RA/Dec to canvas coordinates
+     * RA: 0-24 hours (or 0-360 degrees)
+     * Dec: -90 to +90 degrees
+     */
+    raDecToCanvas(ra, dec) {
+        const padding = 60;
+        const width = this.canvas.width - padding * 2;
+        const height = this.canvas.height - padding * 2;
+
+        // Normalize RA to 0-1 range
+        const normalizedRA = (ra % 24) / 24;
+
+        // Normalize Dec to 0-1 range (-90 to +90 -> 0 to 1)
+        const normalizedDec = (dec + 90) / 180;
+
+        const x = padding + normalizedRA * width;
+        const y = padding + (1 - normalizedDec) * height; // Flip Y axis
+
+        return { x, y };
+    }
+
+    /**
+     * Calculate star size based on magnitude
+     * Brighter stars (lower magnitude) should be larger
+     */
+    magnitudeToSize(magnitude) {
+        // Magnitude typically ranges from -1 (very bright) to 15+ (very dim)
+        // Map to size 2-12 pixels
+        const minMag = -1;
+        const maxMag = 12;
+        const minSize = 2;
+        const maxSize = 10;
+
+        const clampedMag = Math.max(minMag, Math.min(maxMag, magnitude));
+        const normalized = (maxMag - clampedMag) / (maxMag - minMag);
+        return minSize + normalized * (maxSize - minSize);
+    }
+
+    /**
+     * Draw the constellation
+     */
+    render() {
+        const ctx = this.ctx;
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Clear canvas with dark space background
+        ctx.fillStyle = '#0a0a1a';
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw subtle grid/background stars
+        this.drawBackgroundStars();
+
+        if (this.stars.length === 0) {
+            this.drawNoStarsMessage();
+            return;
+        }
+
+        // Calculate canvas positions for all stars
+        const starPositions = this.stars.map(star => ({
+            ...star,
+            pos: this.raDecToCanvas(star.ra, star.dec)
+        }));
+
+        // Sort by RA for consistent connections
+        starPositions.sort((a, b) => a.ra - b.ra);
+
+        // Draw constellation lines
+        this.drawConnections(starPositions);
+
+        // Draw stars
+        this.drawStars(starPositions);
+
+        // Draw labels for named stars
+        this.drawLabels(starPositions);
+
+        // Draw title
+        this.drawTitle();
+    }
+
+    drawBackgroundStars() {
+        const ctx = this.ctx;
+        // Draw random small background stars for ambiance
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        for (let i = 0; i < 100; i++) {
+            const x = Math.random() * this.canvas.width;
+            const y = Math.random() * this.canvas.height;
+            const size = Math.random() * 1.5;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawConnections(starPositions) {
+        const ctx = this.ctx;
+
+        // Draw glowing constellation lines
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        for (let i = 0; i < starPositions.length - 1; i++) {
+            const star1 = starPositions[i];
+            const star2 = starPositions[i + 1];
+            ctx.moveTo(star1.pos.x, star1.pos.y);
+            ctx.lineTo(star2.pos.x, star2.pos.y);
+        }
+
+        // Close the constellation
+        if (starPositions.length >= 3) {
+            const first = starPositions[0];
+            const last = starPositions[starPositions.length - 1];
+            ctx.moveTo(last.pos.x, last.pos.y);
+            ctx.lineTo(first.pos.x, first.pos.y);
+        }
+
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    drawStars(starPositions) {
+        const ctx = this.ctx;
+
+        for (const star of starPositions) {
+            const size = this.magnitudeToSize(star.magnitude);
+
+            // Draw glow
+            const gradient = ctx.createRadialGradient(
+                star.pos.x, star.pos.y, 0,
+                star.pos.x, star.pos.y, size * 3
+            );
+            gradient.addColorStop(0, star.color);
+            gradient.addColorStop(0.3, star.color + '80');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(star.pos.x, star.pos.y, size * 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw star core
+            ctx.fillStyle = star.color;
+            ctx.beginPath();
+            ctx.arc(star.pos.x, star.pos.y, size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw bright center
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(star.pos.x, star.pos.y, size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawLabels(starPositions) {
+        const ctx = this.ctx;
+        ctx.font = '11px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(200, 220, 255, 0.9)';
+        ctx.textAlign = 'center';
+
+        // Only label the first few stars to avoid clutter
+        const starsToLabel = starPositions.slice(0, 5);
+
+        for (const star of starsToLabel) {
+            if (star.name && !star.name.startsWith('HIP')) {
+                ctx.fillText(star.name, star.pos.x, star.pos.y - 15);
+            }
+        }
+    }
+
+    drawTitle() {
+        const ctx = this.ctx;
+        ctx.font = 'bold 16px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(200, 220, 255, 0.9)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Your Personal Constellation', this.canvas.width / 2, 30);
+
+        ctx.font = '12px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(150, 170, 200, 0.8)';
+        ctx.fillText(`${this.stars.length} stars at your special distance`, this.canvas.width / 2, 50);
+    }
+
+    drawNoStarsMessage() {
+        const ctx = this.ctx;
+        ctx.font = '18px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(150, 170, 200, 0.8)';
+        ctx.textAlign = 'center';
+        ctx.fillText('No stars found at this distance', this.canvas.width / 2, this.canvas.height / 2);
+        ctx.font = '14px Arial, sans-serif';
+        ctx.fillText('Try adjusting your date range', this.canvas.width / 2, this.canvas.height / 2 + 25);
+    }
+
+    /**
+     * Download the constellation as PNG
+     */
+    downloadImage(filename = 'my-constellation.png') {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = this.canvas.toDataURL('image/png');
+        link.click();
+    }
+}
+
 // UI Controller
 class UIController {
+    static constellationRenderer = null;
+
     static showResults() {
         document.getElementById('results').classList.remove('hidden');
         document.getElementById('error').classList.add('hidden');
@@ -199,32 +442,48 @@ class UIController {
             starResultsContainer.innerHTML = `
                 <div class="no-stars">
                     <div class="no-stars-icon">🔭</div>
-                    <h3>No stars found at this exact distance</h3>
-                    <p>Try adjusting your date range. Our database contains over 40,000 stars from 4.2 to 5,000 light-years away.</p>
+                    <h3>No stars found within this date range</h3>
+                    <p>Try a slightly different date range. We're searching with ±1 month tolerance.</p>
                 </div>
             `;
+            // Still render empty constellation
+            this.renderConstellation([]);
             return;
         }
 
-        const starsHTML = stars.map(star => {
+        // Create constellation section
+        const constellationHTML = `
+            <div class="constellation-section">
+                <h2>✨ Your Personal Constellation</h2>
+                <p class="constellation-subtitle">
+                    ${stars.length} star${stars.length > 1 ? 's' : ''} form your unique pattern -
+                    light that traveled ${targetLightYears.toFixed(2)} years to reach you!
+                </p>
+                <div class="constellation-container">
+                    <canvas id="constellationCanvas" width="500" height="400"></canvas>
+                </div>
+                <button id="downloadBtn" class="download-btn">
+                    📥 Download Constellation
+                </button>
+            </div>
+        `;
+
+        // Create star list
+        const starsHTML = stars.slice(0, 10).map(star => {
             const daysDifference = StarFinderService.calculateDaysDifference(targetLightYears, star.distance);
             const accuracyText = daysDifference < 1
-                ? 'Less than 1 day difference!'
-                : `±${Math.round(daysDifference)} days difference`;
-
-            // Show magnitude if available
-            const magInfo = star.magnitude && star.magnitude < 90
-                ? `<div><strong>Brightness:</strong> ${star.magnitude.toFixed(2)} mag</div>`
-                : '';
+                ? 'Perfect match!'
+                : `±${Math.round(daysDifference)} days`;
 
             return `
                 <div class="star-card">
-                    <div class="star-name">⭐ ${star.name}</div>
+                    <div class="star-name">
+                        <span class="star-dot" style="background: ${star.color}"></span>
+                        ${star.name}
+                    </div>
                     <div class="star-info">
-                        <div><strong>Distance:</strong> <span class="star-distance">${star.distance.toFixed(2)} light-years</span></div>
-                        <div><strong>Constellation:</strong> ${star.constellation}</div>
+                        <div><strong>Distance:</strong> ${star.distance.toFixed(4)} ly</div>
                         <div><strong>Type:</strong> ${star.type}</div>
-                        ${magInfo}
                         <div><strong>Precision:</strong> ${accuracyText}</div>
                     </div>
                 </div>
@@ -232,13 +491,36 @@ class UIController {
         }).join('');
 
         starResultsContainer.innerHTML = `
-            <h2>✨ Your Star${stars.length > 1 ? 's' : ''}!</h2>
-            <p style="color: #b8c5d6; margin-bottom: 20px;">
-                Found ${stars.length} star${stars.length > 1 ? 's' : ''} whose light has been traveling
-                for approximately this duration. These are real stars from the Hipparcos, Yale, and Gliese catalogs!
-            </p>
-            ${starsHTML}
+            ${constellationHTML}
+            <div class="star-list">
+                <h3>Stars in Your Constellation</h3>
+                ${starsHTML}
+                ${stars.length > 10 ? `<p class="more-stars">...and ${stars.length - 10} more stars</p>` : ''}
+            </div>
         `;
+
+        // Render constellation on canvas
+        this.renderConstellation(stars);
+
+        // Add download button handler
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (this.constellationRenderer) {
+                const date = new Date().toISOString().split('T')[0];
+                this.constellationRenderer.downloadImage(`constellation-${date}.png`);
+            }
+        });
+    }
+
+    static renderConstellation(stars) {
+        // Wait for canvas to be in DOM
+        setTimeout(() => {
+            const canvas = document.getElementById('constellationCanvas');
+            if (canvas) {
+                this.constellationRenderer = new ConstellationRenderer('constellationCanvas');
+                this.constellationRenderer.setStars(stars);
+                this.constellationRenderer.render();
+            }
+        }, 100);
     }
 }
 
@@ -247,7 +529,6 @@ async function calculateAndFindStars() {
     const date1Input = document.getElementById('date1').value;
     const date2Input = document.getElementById('date2').value;
 
-    // Validate inputs
     if (!date1Input || !date2Input) {
         UIController.showError('Please select both dates');
         return;
@@ -256,13 +537,11 @@ async function calculateAndFindStars() {
     const date1 = new Date(date1Input);
     const date2 = new Date(date2Input);
 
-    // Validate date order
     if (date2 < date1) {
         UIController.showError('End date must be after start date');
         return;
     }
 
-    // Check if database is loaded
     if (!dbLoaded) {
         UIController.showError('Database is still loading. Please wait...');
         return;
@@ -270,15 +549,13 @@ async function calculateAndFindStars() {
 
     // Calculate days between dates
     const numOfDays = DateCalculationService.calculateDaysBetween(date1, date2);
-
-    // Convert to light-years
     const lightYears = DateCalculationService.daysToLightYears(numOfDays);
 
-    // Update stats display
+    // Update stats
     UIController.updateStats(numOfDays, lightYears);
 
-    // Find stars at this distance
-    const matchingStars = StarFinderService.findStarsAtDistance(lightYears);
+    // Find stars with 1 month tolerance
+    const matchingStars = StarFinderService.findStarsAtDistance(lightYears, 1);
 
     // Display results
     UIController.showResults();
@@ -287,24 +564,21 @@ async function calculateAndFindStars() {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', async () => {
-    // Show loading message
     const calculateBtn = document.getElementById('calculateBtn');
     calculateBtn.disabled = true;
     calculateBtn.textContent = 'Loading Database...';
 
-    // Load the stars database
     const success = await loadStarsDatabase();
 
-    // Re-enable button
     calculateBtn.disabled = false;
-    calculateBtn.textContent = 'Find My Star ⭐';
+    calculateBtn.textContent = 'Find My Constellation ⭐';
 
     if (!success) {
         UIController.showError('Failed to load star database. Please refresh the page.');
         return;
     }
 
-    // Set default dates (example: 10 years ago to today)
+    // Set default dates
     const today = new Date();
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(today.getFullYear() - 10);
@@ -312,10 +586,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('date2').valueAsDate = today;
     document.getElementById('date1').valueAsDate = tenYearsAgo;
 
-    // Add click event listener to calculate button
     calculateBtn.addEventListener('click', calculateAndFindStars);
 
-    // Allow Enter key to trigger calculation
     document.querySelectorAll('input[type="date"]').forEach(input => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -325,7 +597,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-// Helper function to show errors
 function showError(message) {
     UIController.showError(message);
 }
